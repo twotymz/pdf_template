@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Text.RegularExpressions;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 
@@ -14,13 +15,13 @@ namespace PdfTemplate
         class FormatLine
         {
             public int LineNo { get; set; }
-            public string Format { get; set; }
+            public string Pattern { get; set; }
         }
 
         static void Main(string[] args)
         {
-            List<FormatLine> formatLines = readTemplate("C:\\Users\\josh\\Desktop\\template.txt");
-            processPDF("C:\\Users\\josh\\Desktop\\pdfs\\George Evenue.pdf", formatLines);
+            List<FormatLine> formatLines = readTemplate("C:\\Users\\Josh\\Desktop\\pdfs\\headliner\\date\\time\\template.txt");
+            processPDF("C:\\Users\\Josh\\Desktop\\pdfs\\headliner\\date\\time\\pdf.pdf", formatLines);
         }
 
         static List<FormatLine> readTemplate (string path)
@@ -43,8 +44,8 @@ namespace PdfTemplate
                 {
                     if (tokens.Length-1 > 0)
                     {
-                        string format = string.Join(" ", tokens, 1, tokens.Length-1);
-                        formatLines.Add(new FormatLine { LineNo = line_no, Format = format });
+                        string pattern = string.Join(" ", tokens, 1, tokens.Length-1);
+                        formatLines.Add(new FormatLine { LineNo = line_no, Pattern = pattern });
                     }
                 }
             }
@@ -58,19 +59,35 @@ namespace PdfTemplate
             {
                 for (int i = 1; i <= reader.NumberOfPages; i++)
                 {
+                    Console.WriteLine("------------------------------");
+                    Console.WriteLine("Page {0}", i);
+
                     string text = PdfTextExtractor.GetTextFromPage(reader, i);
                     string[] lines = text.Split('\n');
+                    Dictionary<string, string> values = new Dictionary<string,string>();
 
                     foreach (FormatLine line in formatLines)
                     {
-                        Scanner scanner = new Scanner();
-                        Dictionary<string,string> values = scanner.Scan(line.Format, lines[line.LineNo]);
-
-                        foreach (string key in values.Keys)
+                        Regex regex = new Regex(line.Pattern);
+                        GroupCollection groups = regex.Match(lines[line.LineNo]).Groups;
+                        foreach (string groupname in regex.GetGroupNames())
                         {
-                            Console.WriteLine(string.Format("{0} = {1}", key, values[key]));
-                        }
-                    }                    
+                            switch(groupname)
+                            {
+                                case "section":
+                                case "row" :
+                                case "seat" :
+                                case "barcode" :
+                                    values.Add(groupname, groups[groupname].Value);
+                                    break;
+                            }
+                        }            
+                    }
+
+                    foreach(string key in values.Keys)
+                    {
+                        Console.WriteLine("{0} = {1}", key, values[key]);
+                    }
                 }
             }
         }
