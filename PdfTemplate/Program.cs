@@ -7,87 +7,51 @@ using System.IO;
 using System.Text.RegularExpressions;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
+using PdfTemplateLib;
+
 
 namespace PdfTemplate
 {
     class Program
     {
-        class FormatLine
-        {
-            public int LineNo { get; set; }
-            public string Pattern { get; set; }
-        }
-
         static void Main(string[] args)
         {
-            List<FormatLine> formatLines = readTemplate("C:\\Users\\Josh\\Desktop\\pdfs\\headliner\\date\\time\\template.txt");
-            processPDF("C:\\Users\\Josh\\Desktop\\pdfs\\headliner\\date\\time\\pdf.pdf", formatLines);
-        }
+            /*
+            Processor processor = new Processor();
+            List<Result> results = processor.ProcessPDF("C:\\Users\\Josh\\Desktop\\pdfs\\headliner\\date\\time\\pdf.pdf", "C:\\Users\\Josh\\Desktop\\pdfs\\headliner\\date\\time\\template.txt");
 
-        static List<FormatLine> readTemplate (string path)
-        {
-            List<FormatLine> formatLines = new List<FormatLine>();
-            string[] lines = File.ReadAllLines(path);
-
-            foreach (string l in lines)
+            foreach (Result result in results)
             {
-                if (l.Length == 0 || l[0] == '#')
-                {
-                    continue;
-                }
-
-                string[] tokens = l.Split();
-                int line_no;
-
-                // This is a line definition.
-                if (int.TryParse(tokens[0], out line_no))
-                {
-                    if (tokens.Length-1 > 0)
-                    {
-                        string pattern = string.Join(" ", tokens, 1, tokens.Length-1);
-                        formatLines.Add(new FormatLine { LineNo = line_no, Pattern = pattern });
-                    }
-                }
+                Console.WriteLine("Section: {0}, Row: {1}, Seat: {2}, Barcode: {3}", 
+                                  result.Section, 
+                                  result.Row, 
+                                  result.Seat, 
+                                  result.Barcode);
             }
+             */
 
-            return formatLines;
-        }
+            string path = "C:\\Users\\Josh\\Desktop\\pdfs";
+            string[] files = Directory.GetFiles(path,"*.pdf",SearchOption.AllDirectories);
 
-        static void processPDF(string pdfPath, List<FormatLine> formatLines)
-        {
-            using (PdfReader reader = new PdfReader(pdfPath))
+            foreach (string file in files)
             {
-                for (int i = 1; i <= reader.NumberOfPages; i++)
+                string templatePath = Path.GetDirectoryName(file) + "\\template.txt";
+                if (File.Exists(templatePath))
                 {
-                    Console.WriteLine("------------------------------");
-                    Console.WriteLine("Page {0}", i);
+                    Processor processor = new Processor();
+                    List<Result> results = processor.ProcessPDF(file, templatePath);
 
-                    string text = PdfTextExtractor.GetTextFromPage(reader, i);
-                    string[] lines = text.Split('\n');
-                    Dictionary<string, string> values = new Dictionary<string,string>();
-
-                    foreach (FormatLine line in formatLines)
+                    Console.WriteLine("--------------------");
+                    Console.WriteLine(file);
+                    foreach (Result result in results)
                     {
-                        Regex regex = new Regex(line.Pattern);
-                        GroupCollection groups = regex.Match(lines[line.LineNo]).Groups;
-                        foreach (string groupname in regex.GetGroupNames())
-                        {
-                            switch(groupname)
-                            {
-                                case "section":
-                                case "row" :
-                                case "seat" :
-                                case "barcode" :
-                                    values.Add(groupname, groups[groupname].Value);
-                                    break;
-                            }
-                        }            
-                    }
-
-                    foreach(string key in values.Keys)
-                    {
-                        Console.WriteLine("{0} = {1}", key, values[key]);
-                    }
+                        Console.WriteLine("Section: {0}, Row: {1}, Seat: {2}, Barcode: {3}, Confirmation: {4}",
+                                          result.Section,
+                                          result.Row,
+                                          result.Seat,
+                                          result.Barcode,
+                                          result.ConfNumber);
+                    }                    
                 }
             }
         }
